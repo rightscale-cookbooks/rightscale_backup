@@ -3,6 +3,11 @@ rightscale_backup Cookbook CHANGELOG
 
 This file is used to list changes made in each version of the rightscale_backup cookbook.
 
+v1.1.8
+------
+
+- Include 'build-essentials' which installs packages required for compiling and installing right_api_client.
+
 v1.1.7
 ------
 
