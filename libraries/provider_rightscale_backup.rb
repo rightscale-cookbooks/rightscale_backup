@@ -273,14 +273,8 @@ class Chef
       def initialize_api_client(options = {})
         require "right_api_client"
 
-        # Load RightScale information from 'user-data' file
-        require "/var/spool/cloud/user-data.rb"
-
-        account_id, instance_token = ENV["RS_API_TOKEN"].split(":")
         options = {
-          :account_id => account_id,
-          :instance_token => instance_token,
-          :api_url => "https://#{ENV["RS_SERVER"]}",
+          :rl10=>true,
           :timeout => 20 * 60,
         }.merge options
 
