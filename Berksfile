@@ -2,7 +2,6 @@ site :opscode
 
 metadata
 
-cookbook 'build-essential', '~> 3.2.0'
 cookbook 'rightscale_volume', github:'rightscale-cookbooks/rightscale_volume'
 
 group :integration do

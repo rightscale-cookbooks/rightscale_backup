@@ -6,7 +6,7 @@ description      'Provides a resource to manage volume backups on any cloud Righ
 long_description IO.read(File.join(File.dirname(__FILE__), 'README.md'))
 version          '1.2.1'
 
-depends 'build-essential', '3.2.0'
+depends 'build-essential'
 depends 'rightscale_volume', '~> 1.3.1'
 
 recipe 'rightscale_backup::default', 'Default recipe for installing required packages/gems.'
