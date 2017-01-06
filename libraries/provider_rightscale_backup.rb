@@ -17,22 +17,30 @@
 # limitations under the License.
 #
 
-require "chef/provider"
+require 'chef/provider'
 
 class Chef
   class Provider
     # A Chef provider for the rightscale_backup resource.
     #
-    class RightscaleBackup < Chef::Provider
+    class RightscaleBackup < Chef::Provider::LWRPBase
       # Loads @current_resource instance variable with backup hash values in the
       # node if backup exists in the node. Also initializes right_api_client for
       # making instance-facing RightScale API calls.
       #
+      provides :rightscale_backup
+      include Chef::DSL::IncludeRecipe
+      use_inline_resources
+
+      def whyrun_supported?
+        true
+      end
+
       def load_current_resource
         @new_resource.nickname(@new_resource.name) unless @new_resource.nickname
         @current_resource = Chef::Resource::RightscaleBackup.new(@new_resource.name)
         @current_resource.nickname @new_resource.nickname
-        node.set['rightscale_backup'] ||= {}
+        node.default['rightscale_backup'] ||= {}
 
         @api_client = initialize_api_client
 
@@ -42,8 +50,8 @@ class Chef
 
       # Creates a backup of the volumes in the cloud.
       #
-      def action_create
-        Chef::Log.info "Creating backup of all volumes currently attached to the instance..."
+      action :create do
+        Chef::Log.info 'Creating backup of all volumes currently attached to the instance...'
 
         # Backup all volumes attached to the instance.
         # TODO: Have a 'device' attribute for rightscale_backup resource which specifies
@@ -53,12 +61,12 @@ class Chef
         backup = create_backup(get_volume_attachment_hrefs)
 
         Chef::Log.info "Backup for devices '#{backup.show.name}' created and committed successfully."
-        @new_resource.updated_by_last_action(true)
+        # @new_resource.updated_by_last_action(true)
       end
 
       # Restores a backup of volumes from the cloud on to an instance.
       #
-      def action_restore
+      action :restore do
         # If no timestamp was specified get the latest backup for the lineage.
         # API 1.5 does not do an inclusive search for timestamp so
         # increment by 1
@@ -67,12 +75,12 @@ class Chef
         # Get backup for the specified lineage and timestamp
         backup = find_latest_backup(@new_resource.lineage, timestamp, @new_resource.from_master)
         if backup.nil?
-          raise " No backups found in lineage '#{@new_resource.lineage}' within timestamp '#{timestamp}'!" +
-            " Please check the lineage and/or timestamp and try again."
+          raise " No backups found in lineage '#{@new_resource.lineage}' within timestamp '#{timestamp}'!" \
+                ' Please check the lineage and/or timestamp and try again.'
         end
 
-        node.set['rightscale_backup'][@current_resource.nickname] ||= {}
-        node.set['rightscale_backup'][@current_resource.nickname]['devices'] = []
+        node.override['rightscale_backup'][@current_resource.nickname] ||= {}
+        node.override['rightscale_backup'][@current_resource.nickname]['devices'] = []
 
         # If multiple volume snapshots are found in the backup
         multiple_snapshots = backup.volume_snapshots.size > 1
@@ -100,7 +108,7 @@ class Chef
           r.run_action(:create)
           r.run_action(:attach)
 
-          node.set['rightscale_backup'][@current_resource.nickname]['devices'] <<
+          node.override['rightscale_backup'][@current_resource.nickname]['devices'] <<
             node['rightscale_volume'][volume_nickname]['device']
 
           r.updated?
@@ -111,23 +119,23 @@ class Chef
 
       # Cleans up old backups from the cloud.
       #
-      def action_cleanup
+      action :cleanup do
         # Get values for the number of backups to clean up specified by the user
         # If no values are specified use the defaults
         cleanup_options = {
-          :keep_last => @new_resource.keep_last,
-          :dailies => @new_resource.dailies,
-          :monthlies => @new_resource.monthlies,
-          :weeklies => @new_resource.weeklies,
-          :yearlies => @new_resource.yearlies
+          keep_last: @new_resource.keep_last,
+          dailies: @new_resource.dailies,
+          monthlies: @new_resource.monthlies,
+          weeklies: @new_resource.weeklies,
+          yearlies: @new_resource.yearlies
         }
 
         cleanup_backups(@new_resource.lineage, cleanup_options)
 
-        @new_resource.updated_by_last_action(true)
+        # @new_resource.updated_by_last_action(true)
       end
 
-    private
+      private
 
       # Cleans up old backups in a specific lineage.
       #
@@ -142,8 +150,8 @@ class Chef
       def cleanup_backups(lineage, cleanup_options)
         # Get the parameters required for cleaning up
         params = {
-          :cloud_href => get_cloud_href,
-          :lineage => lineage
+          cloud_href: get_cloud_href,
+          lineage: lineage
         }
         params.merge!(cleanup_options)
 
@@ -162,10 +170,10 @@ class Chef
       #
       def create_backup(attachment_hrefs)
         params = {
-          :backup => {
-            :lineage => @new_resource.lineage,
-            :name => @new_resource.nickname,
-            :volume_attachment_hrefs => attachment_hrefs
+          backup: {
+            lineage: @new_resource.lineage,
+            name: @new_resource.nickname,
+            volume_attachment_hrefs: attachment_hrefs
           }
         }
 
@@ -179,8 +187,8 @@ class Chef
         Chef::Log.info "Creating a backup with the following parameters: #{params.inspect}..."
         new_backup = @api_client.backups.create(params)
 
-        unless ['google', 'gce', 'ec2', 'rackspace'].include?(node['cloud']['provider'])
-          Timeout::timeout(@current_resource.timeout * 60) do
+        unless %w(google gce ec2 rackspace).include?(node['cloud']['provider'])
+          Timeout.timeout(@current_resource.timeout * 60) do
             begin
               # Wait till the backup is complete.
               while (completed = new_backup.show.completed) != true
@@ -194,8 +202,8 @@ class Chef
         end
 
         # Update the backup by setting committed to true.
-        Chef::Log.info "Backup completed. Committing the backup..."
-        new_backup.update(:backup => {:committed => "true"})
+        Chef::Log.info 'Backup completed. Committing the backup...'
+        new_backup.update(backup: { committed: 'true' })
 
         new_backup
       end
@@ -212,8 +220,8 @@ class Chef
       def find_latest_backup(lineage, timestamp, from_master = nil)
         filter = [
           "latest_before==#{timestamp.utc.strftime('%Y/%m/%d %H:%M:%S %z')}",
-          "committed==true",
-          "completed==true"
+          'committed==true',
+          'completed==true'
         ]
         filter << "from_master==#{from_master}" if from_master
 
@@ -222,7 +230,7 @@ class Chef
         cloud_href = @api_client.get_instance.cloud.href
         filter << "cloud_href==#{cloud_href}"
 
-        backup = @api_client.backups.index(:lineage => lineage, :filter => filter)
+        backup = @api_client.backups.index(lineage: lineage, filter: filter)
         backup.first
       end
 
@@ -247,7 +255,7 @@ class Chef
       # @return [Array<String>] the volume attachment hrefs
       #
       def get_volume_attachment_hrefs
-        attachments = @api_client.volume_attachments.index(:filter => ["instance_href==#{get_instance_href}"])
+        attachments = @api_client.volume_attachments.index(filter: ["instance_href==#{get_instance_href}"])
 
         # Reject following attachments:
         #   - attachments whose device parameter is set to 'unknown'
@@ -256,12 +264,12 @@ class Chef
         #   - cloudstack boot disk  - shown by device_id as 'device_id:0'
         attachments.reject! do |attachment|
           attachment.device == 'unknown' ||
-          attachment.resource_uid =~ /\/disks\/boot-/ ||
-          (node['cloud']['provider'] == 'ec2' && attachment.device_id == '/dev/sda1') ||
-          (node['cloud']['provider'] == 'cloudstack' && attachment.device_id == 'device_id:0')
+            attachment.resource_uid =~ %r{\/disks\/boot-} ||
+            (node['cloud']['provider'] == 'ec2' && attachment.device_id == '/dev/sda1') ||
+            (node['cloud']['provider'] == 'cloudstack' && attachment.device_id == 'device_id:0')
         end
 
-        attachments.map { |attachment| attachment.href }
+        attachments.map(&:href)
       end
 
       # Initializes API client for handling RightScale instance facing API 1.5 calls.
@@ -271,11 +279,11 @@ class Chef
       # @return [RightApi::Client] the RightAPI client instance
       #
       def initialize_api_client(options = {})
-        require "right_api_client"
+        require 'right_api_client'
 
         options = {
-          :rl10=>true,
-          :timeout => 20 * 60,
+          rl10: true,
+          timeout: 20 * 60
         }.merge options
 
         client = RightApi::Client.new(options)

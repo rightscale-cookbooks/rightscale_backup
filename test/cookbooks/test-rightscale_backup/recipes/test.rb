@@ -46,7 +46,7 @@ log '***** TESTING action_create - create backup of volume 1 and 2 *****'
 # Create and attach volume 1 and 2 using the rightscale_volume cookbook
 rightscale_volume test_volume_1 do
   size volume_size
-  description "test device created from rightscale_volume cookbook"
+  description 'test device created from rightscale_volume cookbook'
   action [:create, :attach]
 end
 
@@ -59,7 +59,7 @@ end
 
 rightscale_volume test_volume_2 do
   size volume_size
-  description "test device created from rightscale_volume cookbook"
+  description 'test device created from rightscale_volume cookbook'
   action [:create, :attach]
 end
 
@@ -73,7 +73,7 @@ end
 # Backup the volumes
 rightscale_backup backup_1 do
   lineage backup_lineage
-  description "test backup created from rightscale_backup cookbook"
+  description 'test backup created from rightscale_backup cookbook'
   action :create
 end
 
@@ -88,7 +88,7 @@ ruby_block "ensure backup #{backup_1} created" do
   end
 end
 
-ruby_block "ensure that the backup is complete" do
+ruby_block 'ensure that the backup is complete' do
   block do
     wait_for_backups(backup_1, backup_lineage)
   end
@@ -97,7 +97,7 @@ end
 # Take another backup for testing clean up action
 rightscale_backup backup_2 do
   lineage backup_lineage
-  description "test backup created from rightscale_backup cookbook"
+  description 'test backup created from rightscale_backup cookbook'
   action :create
 end
 
@@ -112,7 +112,7 @@ ruby_block "ensure backup #{backup_2} created" do
   end
 end
 
-ruby_block "ensure that the backup is complete" do
+ruby_block 'ensure that the backup is complete' do
   block do
     wait_for_backups(backup_2, backup_lineage)
   end
@@ -143,7 +143,7 @@ log '***** TESTING action_restore from backup - restore test_backup_DELETE_ME **
 
 rightscale_backup backup_1 do
   lineage backup_lineage
-  description "test device created from rightscale_backup cookbook"
+  description 'test device created from rightscale_backup cookbook'
   action :restore
 end
 
@@ -175,7 +175,7 @@ rightscale_backup backup_1 do
 end
 
 # Ensure that the backups got cleaned up
-ruby_block "ensure backups were cleaned up" do
+ruby_block 'ensure backups were cleaned up' do
   block do
     if get_backups(backup_lineage).length == 1
       Chef::Log.info 'TESTING action_cleanup -- PASSED'
@@ -186,15 +186,15 @@ ruby_block "ensure backups were cleaned up" do
 end
 
 # clean up everything
-ruby_block "clean up resources created during the test" do
+ruby_block 'clean up resources created during the test' do
   block do
     Chef::Log.info "Deleting all backups in '#{backup_lineage}' lineage..."
     delete_backups(backup_lineage)
-    Chef::Log.info "Detaching all volumes from the server..."
+    Chef::Log.info 'Detaching all volumes from the server...'
     detach_volumes
     Chef::Log.info "Deleting volumes named '#{backup_name_prefix}'..."
-    delete_volumes(:name => backup_name_prefix)
+    delete_volumes(name: backup_name_prefix)
     Chef::Log.info "Deleting volumes named '#{volume_name_prefix}'..."
-    delete_volumes(:name => volume_name_prefix)
+    delete_volumes(name: volume_name_prefix)
   end
 end

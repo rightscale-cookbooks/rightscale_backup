@@ -3,6 +3,11 @@ rightscale_backup Cookbook CHANGELOG
 
 This file is used to list changes made in each version of the rightscale_backup cookbook.
 
+v2.0.0
+------
+- Updated for Chef 12
+- Updated for ChefDK 1.0.3
+
 v1.2.1
 ------
 - Pin right_api_client at v1.6.1 for ruby 1.9.3 support, Chef 11

@@ -33,11 +33,9 @@ module RightscaleBackupTest
 
       account_id, instance_token = ENV['RS_API_TOKEN'].split(':')
       api_url = "https://#{ENV['RS_SERVER']}"
-      client = RightApi::Client.new({
-        :account_id => account_id,
-        :instance_token => instance_token,
-        :api_url => api_url
-      })
+      client = RightApi::Client.new(account_id: account_id,
+                                    instance_token: instance_token,
+                                    api_url: api_url)
       client.log(Chef::Log.logger)
       client
     end
@@ -48,7 +46,7 @@ module RightscaleBackupTest
     # @return [RightApi::Client] the client instance
     #
     def api_client
-      @@api_client ||= initialize_api_client
+      @api_client ||= initialize_api_client
     end
 
     # Deletes volumes from the cloud.
@@ -56,7 +54,7 @@ module RightscaleBackupTest
     # @param filter [Hash{Symbol => String}] the optional filters
     #
     def delete_volumes(filter = {})
-      get_volumes(filter).each { |volume| volume.destroy }
+      get_volumes(filter).each(&:destroy)
     end
 
     # Delete backups from the cloud.
@@ -65,7 +63,7 @@ module RightscaleBackupTest
     # @param filter [Hash{Symbol => String}] the optional filters
     #
     def delete_backups(lineage, filter = {})
-      get_backups(lineage, filter).each { |backup| backup.destroy }
+      get_backups(lineage, filter).each(&:destroy)
     end
 
     # Detaches volumes from an instance.
@@ -74,7 +72,7 @@ module RightscaleBackupTest
       get_volume_attachments.each do |attachment|
         volume = attachment.volume
         attachment.destroy
-        while ((status = volume.show.status) == 'in-use')
+        while (status = volume.show.status) == 'in-use'
           Chef::Log.info "Waiting for volume to detach... Status is '#{status}'"
           sleep 5
         end
@@ -89,8 +87,8 @@ module RightscaleBackupTest
     # @return [Array<RightApi::Resource>] the backups found
     #
     def get_backups(lineage, filter = {})
-      filter.merge!({:cloud_href => get_cloud_href})
-      api_client.backups.index(:lineage => lineage, :filter => build_filters(filter))
+      filter[:cloud_href] = get_cloud_href
+      api_client.backups.index(lineage: lineage, filter: build_filters(filter))
     end
 
     # Gets the href of the cloud.
@@ -110,7 +108,7 @@ module RightscaleBackupTest
     # @return [Array<RightApi::Resource>] the volumes found
     #
     def get_volumes(filter = {})
-      api_client.volumes.index(:filter => build_filters(filter))
+      api_client.volumes.index(filter: build_filters(filter))
     end
 
     # Gets the volume attachments for a particular instance.
@@ -120,10 +118,10 @@ module RightscaleBackupTest
     # @return [Array<RightApi::Resource>] the volume attachments found
     #
     def get_volume_attachments(filter = {})
-      filter.merge!({:instance_href => api_client.get_instance.href})
-      attachments = api_client.volume_attachments.index(:filter => build_filters(filter))
+      filter[:instance_href] = api_client.get_instance.href
+      attachments = api_client.volume_attachments.index(filter: build_filters(filter))
       # Skip the boot device attachments if there were any
-      attachments.reject { |attachment| attachment.resource_uid =~ /\/disks\/boot-/ }
+      attachments.reject { |attachment| attachment.resource_uid =~ %r{\/disks\/boot-} }
     end
 
     # Checks if the backup was created in the cloud.
@@ -135,9 +133,9 @@ module RightscaleBackupTest
     #
     def is_backup_created?(name, lineage)
       filter = {
-        "committed" => "true"
+        'committed' => 'true'
       }
-      backups = get_backups(lineage, filter).map { |backup| backup.name }
+      backups = get_backups(lineage, filter).map(&:name)
 
       if backups.empty?
         return false
@@ -155,7 +153,7 @@ module RightscaleBackupTest
     def wait_for_backups(name, lineage)
       completed = false
       while completed != true
-        backup = get_backups(lineage, "committed" => "true")
+        backup = get_backups(lineage, 'committed' => 'true')
         backup = backup.select { |bkp| bkp.show.name == name }.first
 
         Chef::Log.info "Waiting for backup to complete... Status is '#{completed}'"
@@ -171,13 +169,11 @@ module RightscaleBackupTest
     # @return [Boolean] true if the volume is detached, false otherwise
     #
     def is_volume_detached?(volume_id)
-      volume_to_be_detached = get_volumes(:resource_uid => volume_id).first
+      volume_to_be_detached = get_volumes(resource_uid: volume_id).first
       return false if volume_to_be_detached.nil?
-      filter = build_filters({
-        :instance_href => api_client.get_instance.href,
-        :volume_href => volume_to_be_detached.href
-      })
-      api_client.volume_attachments.index(:filter => filter).empty? ? true : false
+      filter = build_filters(instance_href: api_client.get_instance.href,
+                             volume_href: volume_to_be_detached.href)
+      api_client.volume_attachments.index(filter: filter).empty? ? true : false
     end
 
     # Checks if the volume is deleted from the cloud.
@@ -187,7 +183,7 @@ module RightscaleBackupTest
     # @return [Boolean] true if the volume is deleted, false otherwise
     #
     def is_volume_deleted?(volume_name)
-      volumes_found = get_volumes(:name => volume_name)
+      volumes_found = get_volumes(name: volume_name)
       volumes_found.empty? ? true : false
     end
 
@@ -215,10 +211,10 @@ module RightscaleBackupTest
         case filter.to_s
         when /^(!|<>)(.*)$/
           operator = '<>'
-          filter = $2
+          filter = Regexp.last_match(2)
         when /^(==)?(.*)$/
           operator = '=='
-          filter = $2
+          filter = Regexp.last_match(2)
         end
         "#{name}#{operator}#{filter}"
       end

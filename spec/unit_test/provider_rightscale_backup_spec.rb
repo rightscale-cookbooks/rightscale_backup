@@ -40,7 +40,7 @@ describe Chef::Provider::RightscaleBackup do
 
   # Mock objects for the right_api_client
   let(:client_stub) do
-    client = double('RightApi::Client', :log => nil)
+    client = double('RightApi::Client', log: nil)
     client.stub(:get_instance).and_return(instance_stub)
     client
   end
@@ -55,49 +55,49 @@ describe Chef::Provider::RightscaleBackup do
   let(:instance_stub) do
     instance = double('instance')
     instance.stub(
-      :links => [{
+      links: [{
         'rel' => 'cloud',
         'href' => 'some_cloud_href'
       }],
-      :href => 'some_href',
-      :cloud => cloud_stub
+      href: 'some_href',
+      cloud: cloud_stub
     )
     instance
   end
 
   let(:cloud_stub) do
     cloud = double('cloud')
-    cloud.stub(:href => '/api/clouds/123')
+    cloud.stub(href: '/api/clouds/123')
     cloud
   end
 
   let(:backup_stub) do
     backup = double('backup')
     backup.stub(
-      :name => 'test_backup',
-      :description => 'test_backup description',
-      :completed => true,
-      :volume_snapshots => [
+      name: 'test_backup',
+      description: 'test_backup description',
+      completed: true,
+      volume_snapshots: [
         {
           'resource_uid' => 'v-123456',
-          'position' => '1',
+          'position' => '1'
         }
       ]
     )
     backup
   end
 
-  let(:backup_resource) { double('backups', :show => backup_stub, :update => nil) }
+  let(:backup_resource) { double('backups', show: backup_stub, update: nil) }
 
-  let(:task_resource) { double('tasks', :show => task_stub) }
+  let(:task_resource) { double('tasks', show: task_stub) }
 
-  let(:task_stub) { double('task', :summary => 'completed: restore completed') }
+  let(:task_stub) { double('task', summary: 'completed: restore completed') }
 
   let(:volume_attachment_resource) do
     attachment = double('volume_attachments')
     attachment.stub(
-      :show => volume_attachment_stub,
-      :destroy => nil
+      show: volume_attachment_stub,
+      destroy: nil
     )
     attachment
   end
@@ -105,11 +105,11 @@ describe Chef::Provider::RightscaleBackup do
   let(:volume_attachment_stub) do
     attachment = double('volume_attachment')
     attachment.stub(
-      :state => 'available',
-      :device => 'some_device',
-      :device_id => 'some_device_id',
-      :href => 'some_href',
-      :resource_uid => 'v-123456'
+      state: 'available',
+      device: 'some_device',
+      device_id: 'some_device_id',
+      href: 'some_href',
+      resource_uid: 'v-123456'
     )
     attachment
   end
@@ -117,11 +117,11 @@ describe Chef::Provider::RightscaleBackup do
   let(:boot_volume_attachment_stub) do
     attachment = double('volume_attachment')
     attachment.stub(
-      :state => 'available',
-      :device => 'some_device',
-      :device_id => 'some_device_id',
-      :href => 'some_href',
-      :resource_uid => 'projects/example.com:test/disks/boot-i-12345'
+      state: 'available',
+      device: 'some_device',
+      device_id: 'some_device_id',
+      href: 'some_href',
+      resource_uid: 'projects/example.com:test/disks/boot-i-12345'
     )
     attachment
   end
@@ -129,16 +129,16 @@ describe Chef::Provider::RightscaleBackup do
   let(:volume_type_stub) do
     volume_type = double('volume_type')
     volume_type.stub(
-      :name => 'some_name',
-      :href => 'some_href',
-      :resource_uid => 'some_id'
+      name: 'some_name',
+      href: 'some_href',
+      resource_uid: 'some_id'
     )
     volume_type
   end
 
-  describe "#load_current_resource" do
-    context "when the backup does not exist in the node" do
-      it "should return current_resource" do
+  describe '#load_current_resource' do
+    context 'when the backup does not exist in the node' do
+      it 'should return current_resource' do
         provider.load_current_resource
         provider.current_resource.devices.should be_nil
       end
@@ -147,7 +147,7 @@ describe Chef::Provider::RightscaleBackup do
 
   # Test all actions supported by the provider
   #
-  describe "actions" do
+  describe 'actions' do
     # Creates a test volume by stubbing out the create_volume method.
     #
     def create_test_volume
@@ -159,7 +159,7 @@ describe Chef::Provider::RightscaleBackup do
     # Attaches a test volume by stubbing out the attach_volume method.
     #
     def attach_test_volume
-      provider.stub(:device_letter_exclusions => [])
+      provider.stub(device_letter_exclusions: [])
       provider.stub(:get_next_device).and_return('some_device')
       provider.stub(:attach_volume).and_return('/dev/some_device')
       run_action(:attach)
@@ -173,14 +173,13 @@ describe Chef::Provider::RightscaleBackup do
       provider.load_current_resource
     end
 
-
     before(:each) do
       provider.new_resource = new_resource
     end
 
-    describe "#action_create" do
-      context "given a backup lineage" do
-        it "should create the backup" do
+    describe '#action_create' do
+      context 'given a backup lineage' do
+        it 'should create the backup' do
           new_resource.lineage('some_lineage')
           provider.should_receive(:get_volume_attachment_hrefs).and_return(['some_href'])
           provider.should_receive(:create_backup).and_return(backup_resource)
@@ -189,10 +188,10 @@ describe Chef::Provider::RightscaleBackup do
       end
     end
 
-    describe "#action_restore" do
-      context "given a backup lineage" do
-        context "a backup with a single snapshot is found in the lineage" do
-          it "should restore the backup" do
+    describe '#action_restore' do
+      context 'given a backup lineage' do
+        context 'a backup with a single snapshot is found in the lineage' do
+          it 'should restore the backup' do
             new_resource.name('test_backup')
             new_resource.lineage('some_lineage')
             provider.should_receive(:find_latest_backup).and_return(backup_stub)
@@ -202,26 +201,26 @@ describe Chef::Provider::RightscaleBackup do
           end
         end
 
-        context "a backup with three snapshots is found in the lineage" do
+        context 'a backup with three snapshots is found in the lineage' do
           let(:backup_stub) do
             backup = double('backup')
             backup.stub(
-              :name => 'test_backup',
-              :description => 'test_backup description',
-              :completed => true,
-              :volume_snapshots => [
+              name: 'test_backup',
+              description: 'test_backup description',
+              completed: true,
+              volume_snapshots: [
                 {
                   'resource_uid' => 'v-123456',
-                  'position' => '1',
+                  'position' => '1'
                 },
                 {
                   'resource_uid' => 'v-234567',
-                  'position' => '2',
+                  'position' => '2'
                 },
                 {
                   'resource_uid' => 'v-345678',
-                  'position' => '3',
-                },
+                  'position' => '3'
+                }
               ]
             )
             backup
@@ -239,8 +238,8 @@ describe Chef::Provider::RightscaleBackup do
           end
         end
 
-        context "no backups found in the lineage" do
-          it "should raise an exception" do
+        context 'no backups found in the lineage' do
+          it 'should raise an exception' do
             new_resource.lineage('some_lineage')
             provider.stub(:find_latest_backup).and_return(nil)
             expect { run_action(:restore) }.to raise_error(RuntimeError)
@@ -249,9 +248,9 @@ describe Chef::Provider::RightscaleBackup do
       end
     end
 
-    describe "#action_cleanup" do
-      context "given a backup lineage" do
-        it "should clean up snapshots" do
+    describe '#action_cleanup' do
+      context 'given a backup lineage' do
+        it 'should clean up snapshots' do
           new_resource.lineage('some_lineage')
           provider.should_receive(:cleanup_backups)
           run_action(:cleanup)
@@ -261,76 +260,72 @@ describe Chef::Provider::RightscaleBackup do
   end
 
   # Spec test for the helper methods in the provider
-  describe "class methods" do
+  describe 'class methods' do
     before(:each) do
       provider.new_resource = new_resource
       provider.load_current_resource
     end
 
-    describe "#cleanup_backups" do
-      context "given the backup lineage" do
-        it "should cleanup the backups" do
+    describe '#cleanup_backups' do
+      context 'given the backup lineage' do
+        it 'should cleanup the backups' do
           rotation_options = {
-            :keep_last => 1,
-            :dailies => 1,
-            :weeklies => 1,
-            :monthlies => 1,
-            :yearlies => 1
+            keep_last: 1,
+            dailies: 1,
+            weeklies: 1,
+            monthlies: 1,
+            yearlies: 1
           }
           client_stub.should_receive(:backups).and_return(backup_resource)
           provider.should_receive(:get_cloud_href).and_return('some_cloud_href')
           backup_resource.should_receive(:cleanup).with({
-            :cloud_href => 'some_cloud_href',
-            :lineage => 'some_lineage',
+            cloud_href: 'some_cloud_href',
+            lineage: 'some_lineage'
           }.merge(rotation_options))
           provider.send(:cleanup_backups, 'some_lineage', rotation_options)
         end
       end
     end
 
-    describe "#create_backup" do
-      it "should create the backup in the cloud" do
-        node.set['cloud']['provider'] = 'some_cloud'
+    describe '#create_backup' do
+      it 'should create the backup in the cloud' do
+        node.override['cloud']['provider'] = 'some_cloud'
         new_resource.lineage('some_lineage')
         new_resource.name('some_name')
         new_resource.description('some description')
         new_resource.from_master(true)
 
         client_stub.should_receive(:backups).and_return(backup_resource)
-        backup_resource.should_receive(:create).with({
-          :backup => {
-            :lineage => 'some_lineage',
-            :name => 'some_name',
-            :volume_attachment_hrefs => ['attachment_1', 'attachment_2'],
-            :description => 'some description',
-            :from_master => true
-          }
-        }).and_return(backup_resource)
-        provider.send(:create_backup, ['attachment_1', 'attachment_2'])
+        backup_resource.should_receive(:create).with(backup: {
+                                                       lineage: 'some_lineage',
+                                                       name: 'test_backup',
+                                                       volume_attachment_hrefs: %w(attachment_1 attachment_2),
+                                                       description: 'some description',
+                                                       from_master: true
+                                                     }).and_return(backup_resource)
+        provider.send(:create_backup, %w(attachment_1 attachment_2))
       end
     end
 
-    describe "#find_latest_backup" do
-      it "should find latest backup with the given filter" do
+    describe '#find_latest_backup' do
+      it 'should find latest backup with the given filter' do
         client_stub.should_receive(:backups).and_return(backup_resource)
         timestamp = Time.now
         filter = [
           "latest_before==#{timestamp.utc.strftime('%Y/%m/%d %H:%M:%S %z')}",
-          "committed==true",
-          "completed==true",
-          "from_master==true",
-          "cloud_href==/api/clouds/123"
+          'committed==true',
+          'completed==true',
+          'from_master==true',
+          'cloud_href==/api/clouds/123'
         ]
-        backup_resource.should_receive(:index).with({
-          :lineage => 'some_lineage',
-          :filter => filter
-        }).and_return([backup_resource])
+        backup_resource.should_receive(:index).with(lineage: 'some_lineage',
+                                                    filter: filter).and_return([backup_resource])
         provider.send(:find_latest_backup, 'some_lineage', timestamp, true)
       end
     end
 
-    describe "#get_volume_attachment_hrefs" do
-      it "should return the attached volumes based on the given filter" do
+    describe '#get_volume_attachment_hrefs' do
+      it 'should return the attached volumes based on the given filter' do
         node.set['cloud']['provider'] = 'some_cloud'
         client_stub.should_receive(:volume_attachments).and_return(volume_attachment_resource)
         volume_attachment_resource.should_receive(:index).and_return([volume_attachment_stub])
@@ -338,7 +333,7 @@ describe Chef::Provider::RightscaleBackup do
         attachment_hrefs.should be_a_kind_of(Array)
       end
 
-      it "should skip the boot disk attached to the instance" do
+      it 'should skip the boot disk attached to the instance' do
         node.set['cloud']['provider'] = 'some_cloud'
         client_stub.should_receive(:volume_attachments).and_return(volume_attachment_resource)
         volume_attachment_resource.should_receive(:index).and_return([boot_volume_attachment_stub])
@@ -348,21 +343,20 @@ describe Chef::Provider::RightscaleBackup do
       end
     end
 
-    describe "#get_cloud_href" do
-      it "should get the href of the cloud" do
+    describe '#get_cloud_href' do
+      it 'should get the href of the cloud' do
         client_stub.should_receive(:get_instance).and_return(instance_stub)
         cloud_href = provider.send(:get_cloud_href)
         cloud_href.should == 'some_cloud_href'
       end
     end
 
-    describe "#get_instance_href" do
-      it "should return the instance href" do
+    describe '#get_instance_href' do
+      it 'should return the instance href' do
         client_stub.should_receive(:get_instance).and_return(instance_stub)
         instance_href = provider.send(:get_instance_href)
         instance_href.should == 'some_href'
       end
     end
-
   end
 end
