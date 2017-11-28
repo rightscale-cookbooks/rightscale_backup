@@ -11,3 +11,5 @@ script: "./.travis_install.sh"
 notifications:
   slack:
     secure: chOY/0udwoayYiePZiR35mwtOXMEuzrsKyocPbvPnb1AvKSUjp61Rvr0gXw/Kng0pBfuo4JVPqJK8k5bqBq77nXJaJWrDJ27kAzt1Ams6aQbLF1SdxTkK+7x8TUi6IVXa4nS0rieK2tnL56TU30C7fA3viDJ0O8kxyfbGG261DY=
+    on_success: change
+    on_failure: always
